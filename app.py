@@ -1,39 +1,37 @@
 # app.py
 import streamlit as st
-from transformers import pipeline
+# REMOVE: from transformers import pipeline # <-- Remove this top-level import
 import torch # For st.cache_resource with type hinting if needed
 
-# Page Configuration (optional, but nice)
+# Page Configuration
 st.set_page_config(
     page_title="Simple Sentiment Analyzer",
     page_icon="😊",
     layout="centered"
 )
 
-# Caching the model loading for efficiency
-# @st.cache_resource is the modern way for caching resources like models
 @st.cache_resource
 def load_sentiment_model():
     """Loads the sentiment analysis pipeline."""
-    print("Loading sentiment analysis model...") # For console logging
+    from transformers import pipeline # <--- IMPORT MOVED HERE
+    print("Loading sentiment analysis model...")
     try:
         model = pipeline(
             task="sentiment-analysis",
             model="distilbert-base-uncased-finetuned-sst-2-english"
-            # device=-1 # Uncomment to explicitly force CPU if needed,
-                      # though pipeline usually auto-detects and prefers CPU if no GPU
         )
         print("Model loaded successfully.")
         return model
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        print(f"Error loading model in Streamlit: {e}") # Also print to console
+        print(f"Error loading model in Streamlit: {e}")
         return None
 
 # Load the model
 sentiment_pipeline = load_sentiment_model()
 
-# App title and description
+# ... rest of your app.py code remains the same ...
+
 st.title("📝 Simple Sentiment Analyzer")
 st.markdown("""
 Enter some text below to analyze its sentiment (Positive or Negative).
@@ -41,10 +39,8 @@ This demo uses a pre-trained Transformer model (`distilbert-base-uncased-finetun
 from Hugging Face.
 """)
 
-# Text input
 user_text = st.text_area("Enter text here:", "I love learning about AI and building cool projects!", height=150)
 
-# Analyze button
 if st.button("Analyze Sentiment"):
     if sentiment_pipeline is None:
         st.error("Sentiment analysis model could not be loaded. Please check the logs or try again later.")
@@ -53,20 +49,24 @@ if st.button("Analyze Sentiment"):
     else:
         with st.spinner("Analyzing..."):
             try:
-                results = sentiment_pipeline(user_text)
-                # The pipeline can return a list even for single string input
-                result = results[0]
-                label = result['label']
-                score = result['score']
+                # Ensure pipeline is not None before using it
+                if sentiment_pipeline:
+                    results = sentiment_pipeline(user_text)
+                    result = results[0]
+                    label = result['label']
+                    score = result['score']
 
-                st.subheader("Analysis Result:")
-                if label == "POSITIVE":
-                    st.success(f"Sentiment: {label} (Confidence: {score:.4f})")
-                    st.balloons()
-                elif label == "NEGATIVE":
-                    st.error(f"Sentiment: {label} (Confidence: {score:.4f})")
-                else: # Should not happen with this model, but good for robustness
-                    st.info(f"Sentiment: {label} (Confidence: {score:.4f})")
+                    st.subheader("Analysis Result:")
+                    if label == "POSITIVE":
+                        st.success(f"Sentiment: {label} (Confidence: {score:.4f})")
+                        st.balloons()
+                    elif label == "NEGATIVE":
+                        st.error(f"Sentiment: {label} (Confidence: {score:.4f})")
+                    else:
+                        st.info(f"Sentiment: {label} (Confidence: {score:.4f})")
+                else:
+                    st.error("Sentiment analysis model is not available.")
+
 
             except Exception as e:
                 st.error(f"An error occurred during analysis: {e}")
@@ -77,4 +77,4 @@ st.sidebar.info(
     "No GPU is required for this demo."
 )
 st.sidebar.markdown("---")
-st.sidebar.markdown("Powered by [Hugging Face 🤗 Transformers](https.co/transformers) and [Streamlit](https://streamlit.io).")
+st.sidebar.markdown("Powered by [Hugging Face 🤗 Transformers](https://huggingface.co/transformers) and [Streamlit](https://streamlit.io).")
